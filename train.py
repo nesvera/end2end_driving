@@ -83,7 +83,7 @@ if __name__ == "__main__":
             print("Error: model not found!")
             exit(1)
         else:
-            checkpoint = torch.load(args.model_path)
+            checkpoint = torch.load(args.model_path, map_location=device)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             checkpoint_epoch = checkpoint['epoch']

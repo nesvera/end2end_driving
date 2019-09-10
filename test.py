@@ -51,7 +51,8 @@ if __name__ == "__main__":
 
     dataloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=2)
 
-    model = torch.load(model_path)
+    
+    model = torch.load(model_path, map_location=device)
     model.eval()
 
     while True:
