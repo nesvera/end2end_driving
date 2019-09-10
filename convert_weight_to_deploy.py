@@ -31,9 +31,7 @@ if __name__ == "__main__":
 
     # load model
     model = model.PilotNet(input_shape=(66, 200))
-
-    if torch.cuda.is_available():
-        model  = model.cuda()
+    model.eval()
       
     if os.path.exists(args.model_path) == False:
         print("Error: model not found!")

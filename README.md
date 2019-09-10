@@ -1,5 +1,6 @@
-Print a summary (similar keras) of the model
-sudo pip3 install torchsummary
+Requirements:
+
+    sudo pip3 install torchsummary  #Print a summary (similar keras) of the model
 
 How to use:
 1. Place recorded runs inside "records" folder as following
@@ -36,4 +37,14 @@ How to use:
 
     python3 utils/prepare_dataset.py -i dataset/2019_09_08_21_21_07_45/ -x0 0 -y0 0 -x1 376 -y1 190 -rh 66 -rw 200 -d 0 -s 20
 
-4. 
+4. Train
+
+    python3 train.py -i dataset/2019_09_08_21_21_07_45/ -o model/ -m model/model_44.pth
+
+5. Convert trained weight to deploy
+
+    python3 convert_weight_to_deploy.py -m model/model_44.pth
+
+6. Test
+
+    python3 test.py -i dataset/2019_09_08_21_21_07_45/ -m model/model_44.pthd
