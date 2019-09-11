@@ -8,7 +8,7 @@ __pycache__/
 *.pb
 *.pth
 *.pthd
-
+*.onnx
 
 # Dasets inside dataset folder
 dataset/*/
