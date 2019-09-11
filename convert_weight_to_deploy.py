@@ -1,18 +1,12 @@
 import torch
 import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
 from torchsummary import summary
-from torch.utils.data import DataLoader
 
 import model
 import dataset
 
 import argparse
 import os
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
 

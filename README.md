@@ -2,6 +2,8 @@ Requirements:
 
     sudo pip3 install torchsummary  #Print a summary (similar keras) of the model
 
+    sudo pip3 install onnx onnxruntime
+
 How to use:
 1. Place recorded runs inside "records" folder as following
 
