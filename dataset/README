@@ -1,0 +1,23 @@
+-> How to set a dataset to train
+
+1. Collect data from the car driving it on the track with the xbox controller
+2. Place folders inside one directory and use "python pre_processing.py" to convert images and commands
+   All images will be place insdie one direcoty
+3. Use "python3 split_data.py" to split the dataset (train, test) and save it as npz
+4. You could visualize the dataset with
+
+
+Bugs:
+
+1. I dont know why the pre_processing.py jumps time (12186)
+
+12185;50;1.0;0.110236220472
+12187;50;0.472440944882;-0.0236220472441
+
+This results in an error in python3 split_data.py
+
+Solution: Add line 12186 copying the last one
+
+12185;50;1.0;0.110236220472
+12186;50;1.0;0.110236220472
+12187;50;0.472440944882;-0.0236220472441

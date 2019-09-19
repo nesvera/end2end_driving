@@ -1,136 +1,127 @@
-import torch
-import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
-from torchsummary import summary
-from torch.utils.data import DataLoader
+#!/usr/bin/env python
+# coding: utf-8
 
-import model
-import dataset
+# In[1]:
 
-import argparse
-import os
-import cv2
+
+import keras
+from keras.models import model_from_json, load_model
 import numpy as np
-import matplotlib.pyplot as plt
 
-learning_rate = 0.0001
-epochs = 20
+
+# ### Load Model
+
+# In[2]:
+
+
+# load model
+json_file = open('autopilot_model.json')
+
+model_json = json_file.read()
+json_file.close()
+
+model = model_from_json(model_json)
+model.load_weights('/home/nvidia/Documents/nesvera/neural_nets/lane_following/train_results/2019_05_31-t1/weights/19_06_03-13_21-400.h5')
+
+model.summary()
+
+
+# ### Load dataset
+
+# In[3]:
+
+
+x_train_path = "/home/nvidia/Documents/nesvera/neural_nets/lane_following/dataset/2019_05_25_x_train.npy"
+y_train_path = "/home/nvidia/Documents/nesvera/neural_nets/lane_following/dataset/2019_05_25_y_train.npy"
+
+x_validation_path = "/home/nvidia/Documents/nesvera/neural_nets/lane_following/dataset/02019_05_25_x_validation.npy"
+y_validation_path = "/home/nvidia/Documents/nesvera/neural_nets/lane_following/dataset/02019_05_25_y_validation.npy"
+
+x_train = np.load(x_train_path)
+y_train = np.load(y_train_path)
+
+# ### Compile Model
+
+# In[8]:
+
+
+from keras import optimizers
+
+optimizer = optimizers.Nadam(lr = 0.002, schedule_decay=0.0001)
+model.compile(loss='mse',
+              optimizer=optimizer,
+              metrics=['mse', 'accuracy'])
+
+import csv
+
+
+# ### Train model and Save Weights
+
+# In[ ]:
+
+
+import datetime
+import pickle
+#import pandas as pd
+#import csv
+
+weight_directory = "/home/nvidia/Documents/nesvera/neural_nets/lane_following/weights"
+
+time_start_training = datetime.datetime.now().strftime('%y_%m_%d-%H_%M')
+
+epochs_by_save = 100
+total_epochs = 100000
+train_times = int(total_epochs/epochs_by_save)
+
 batch_size = 32
 
-if __name__ == "__main__":
+total_history = 0
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-i',
-        dest='dataset_path',
-        required=True,
-        help="Dataset path"
-    )
-    parser.add_argument(
-        '-o',
-        dest='output_model_path',
-        required=False,
-        help="Folder to store the model and weights"
-    )
-    parser.add_argument(
-        '-m',
-        dest='model_path',
-        required=False,
-        default=None,
-        help="Path to the trained model"
-    )
+hist_loss = []
+hist_acc = []
+hist_val_loss = []
+hist_val_acc = []
+
+for i in range(train_times):
+    file_path = weight_directory + "/" + time_start_training + "-" + str((i+1)*epochs_by_save)
     
-    args = parser.parse_args()
-
-    dataset_path = args.dataset_path
-    output_model_path = args.output_model_path
-
-    # device configuration
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-    # load datataset and dataloaders
-    if os.path.isdir(dataset_path) == False:
-        print("Error: input path is not a folder")
-        exit(1)
-
-    if os.path.isdir(output_model_path) == False:
-        print("Error: path to save the model is not a folder")
-        exit(1)
-
-    train_dataset = dataset.Image2SteeringDataset(dataset_path)
-
-    dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-
-    # load model
-    model = model.PilotNet(input_shape=(66, 200))
-
-    if torch.cuda.is_available():
-        model  = model.cuda()
-      
-    # loss and optimizers
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    loss_fcn = nn.MSELoss()
-
-    checkpoint_epoch = 0
-
-    # train model
-    total_step = len(dataloader)
-    training_logger = list()
-
-    if args.model_path is not None:
-        if os.path.exists(args.model_path) == False:
-            print("Error: model not found!")
-            exit(1)
-        else:
-            checkpoint = torch.load(args.model_path, map_location=device)
-            model.load_state_dict(checkpoint['model_state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            checkpoint_epoch = checkpoint['epoch']
-            loss_fcn = checkpoint['loss_fcn']
-            training_logger = checkpoint['training_logger']
-
-    for epoch in range(checkpoint_epoch, checkpoint_epoch+epochs):
+    
+    # Training
+    history = model.fit(x_train,
+                      y_train, 
+                      validation_split = 0.2,
+                      epochs = epochs_by_save, 
+                      batch_size = batch_size,
+                      verbose = 1)
+    
+    print(history)
+    
+    # Save
+    for key, values in history.history.items():
         
-        verbose_logger_sum = 0
-        batch_logger_sum = 0
-        for i_batch, sample_batched in enumerate(dataloader):
+        for value in values:
+            if key == 'loss':
+                hist_loss.append(value)
 
-            images = sample_batched['image'].to(device)
-            labels = sample_batched['steering'].to(device)
+            elif key == 'acc':
+                hist_acc.append(value)
 
-            # Foward pass
-            outputs = model(images.float())
-            outputs = outputs.view(outputs.size()[0])
-            
-            loss = loss_fcn(outputs, labels)
-            batch_logger_sum += loss
-            verbose_logger_sum += loss
+            elif key == 'val_loss':
+                hist_val_loss.append(value)
 
-            # Backward and optimize
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            elif key == 'val_acc':
+                hist_val_acc.append(value)
+        
+    # Save plot data
+    hist_path = file_path + "_hist.csv"
+    with open(hist_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(hist_loss)
+        writer.writerow(hist_acc)
+        writer.writerow(hist_val_loss)
+        writer.writerow(hist_val_acc)
+        
+    # Save weight
+    weight_path = file_path + ".h5"
+    model.save_weights(weight_path)
 
-            if (i_batch+1) % 100 == 0:
-                verbose_logger_sum /= 100.
-                print('Epoch [{}/{}], Step[{}/{}], Loss: {:.4f}'
-                      .format(epoch+1, checkpoint_epoch+epochs, i_batch+1, total_step, verbose_logger_sum))
-
-                verbose_logger_sum = 0
-    # save model
-
-
-        batch_logger_avg = batch_logger_sum/len(dataloader)
-
-        training_logger.append(batch_logger_avg)
-
-    output_model_path += "/model_" + str(epoch+1) + ".pth"
-    torch.save({'epoch': epoch+1,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss_fcn': loss_fcn,
-                'training_logger': training_logger}, output_model_path)
-
-    plt.plot(training_logger)
-    plt.show()
